@@ -70,7 +70,7 @@ export async function exportJSONDF(options: {
     displayItemPath: string
     textureExportFolder: string
     modelExportFolder: string
-}) {
+}, minestom = false) {
     const { rig, animations, displayItemPath } = options
 
 
@@ -96,7 +96,7 @@ export async function exportJSONDF(options: {
     }
     for (const [uuid, info] of Object.entries(rig.variants[Object.keys(rig.variants)[0]].models)) {
         nodes[uuid].data = {
-            custom_model_data: info.custom_model_data
+            item_model: info.item_model
         }
     }
 
@@ -152,6 +152,20 @@ export async function exportJSONDF(options: {
     //     animationData["default"].nodes[node.name] = await textToGZip(compressedMatrix);
     // }
 
+    if (minestom) {
+        console.log("Minestom Export:");
+        const result = {
+            meta: dataForTempalte,
+            animations: animationData
+        }
+        console.log(result);
+
+        const tab = window.open("", "_blank");
+        tab?.document.write(`<pre>${JSON.stringify(result, null, 2)}</pre>`);
+        tab?.document.close();
+        
+        return;
+    }
 
     const codeTemplate = buildCodeTemplate(dataForTempalte, animationData);
 
@@ -219,7 +233,7 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
     });
 
     // Set Nodes Variable Block
-    const nodesVarBlock: CodeBlock = {
+    let nodesVarBlock: CodeBlock = {
         id: "block",
         block: "set_var",
         action: "CreateList",
@@ -233,6 +247,7 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
         }
     }
 
+    const SLOTLIMIT = 27; // Minecraft Ches
     Object.entries(templateData.nodes).forEach(([nodeName, nodeData]) => {
         if (nodeData.type === "struct") {
             return; // Skip structs
@@ -257,12 +272,30 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
             item: { id: "item", data: itemData },
             slot: nodesVarBlock.args!.items!.length
         });
+
+        if (nodesVarBlock.args!.items!.length >= SLOTLIMIT) {
+            // push current block and start a new one
+            template.blocks.push(nodesVarBlock);
+            nodesVarBlock = {
+                id: "block",
+                block: "set_var",
+                action: "AppendValue",
+                args: {
+                    items: [
+                        {
+                            item: { id: "var", data: { name: "nodes", scope: "line" } },
+                            slot: 0
+                        }
+                    ]
+                }
+            };
+        }
     });
-    template.blocks.push(nodesVarBlock);
+    if (nodesVarBlock.args!.items!.length > 1) template.blocks.push(nodesVarBlock);
 
 
     for (const [animationName, animation] of Object.entries(rawAnimationData)) {
-        const animationBlock: CodeBlock = {
+        let animationBlock: CodeBlock = {
             id: "block",
             block: "set_var",
             action: "CreateList",
@@ -283,6 +316,23 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
 
         // add node data
         for (const [nodeName, compressedMatrix] of Object.entries(animation.nodes)) {
+            if (animationBlock.args!.items!.length + 2 > SLOTLIMIT) {
+                // push current block and start a new one
+                template.blocks.push(animationBlock);
+                animationBlock = {
+                    id: "block",
+                    block: "set_var",
+                    action: "AppendValue",
+                    args: {
+                        items: [
+                            {
+                                item: { id: "var", data: { name: animationName, scope: "line" } },
+                                slot: 0
+                            }
+                        ]
+                    }
+                };
+            }
             animationBlock.args!.items!.push({
                 item: { id: "txt", data: { name: nodeName } },
                 slot: animationBlock.args!.items!.length
@@ -292,7 +342,7 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
                 slot: animationBlock.args!.items!.length
             });
         }
-        template.blocks.push(animationBlock);
+        if (animationBlock.args!.items!.length > 1) template.blocks.push(animationBlock);
 
         const setDictValueBlock: CodeBlock = {
             id: "block",
@@ -316,7 +366,6 @@ function buildCodeTemplate(templateData: DFTemplateData, rawAnimationData: RawAn
             }
         }
         template.blocks.push(setDictValueBlock);
-
     }
     
 

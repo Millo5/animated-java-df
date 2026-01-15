@@ -133,11 +133,23 @@ MENU.structure.push(new MenuSeparator())
 
 MenuBar.addAction(
 	createAction(`${PACKAGE.name}:diamondfire_export`, {
-		icon: 'export',
+		icon: 'diamond',
 		category: 'animated_java',
 		name: translate('action.export_diamondfire.name'),
 		click() {
 			void exportProjectDF()
+		}
+	}),
+	MENU.id
+)
+
+MenuBar.addAction(
+	createAction(`${PACKAGE.name}:diamondfire_export`, {
+		icon: 'settings',
+		category: 'animated_java',
+		name: translate('action.export_minestom.name'),
+		click() {
+			void exportProjectDF(true)
 		}
 	}),
 	MENU.id

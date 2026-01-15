@@ -45,7 +45,7 @@ export function getExportPaths() {
 	}
 }
 
-async function actuallyExportProject(forceSave = true, df = false) {
+async function actuallyExportProject(forceSave = true, df = false, minestom = false) {
 	const aj = Project!.animated_java
 	const dialog = openExportProgressDialog()
 	// Wait for the dialog to open
@@ -140,6 +140,11 @@ async function actuallyExportProject(forceSave = true, df = false) {
 				rig, animations, displayItemPath, textureExportFolder, modelExportFolder
 			})
 		}
+		if (minestom) {
+			exportJSONDF({
+				rig, animations, displayItemPath, textureExportFolder, modelExportFolder
+			}, true)
+		}
 
 		if (aj.data_pack_export_mode !== 'none') {
 			await compileDataPack(aj.target_minecraft_versions, {
@@ -175,11 +180,11 @@ async function actuallyExportProject(forceSave = true, df = false) {
 	}
 }
 
-export async function exportProjectDF() {
-	await exportProject(true, true)
+export async function exportProjectDF(minestom = false) {
+	await exportProject(true, true, minestom)
 }
 
-export async function exportProject(forceSave = true, df = false) {
+export async function exportProject(forceSave = true, df = false, minestom = false) {
 	if (!Project) return // TODO: Handle this error better
 
 	if (
@@ -221,5 +226,5 @@ export async function exportProject(forceSave = true, df = false) {
 
 	settingsDialog.close(0)
 
-	await actuallyExportProject(forceSave, df)
+	await actuallyExportProject(forceSave, df, minestom)
 }
